@@ -15,6 +15,7 @@ class point_gainer:
         self.selenium_setup()
         self.login()
         self.watch_ads()
+        self.driver.quit()
 
     def selenium_setup(self):
         chrome_options = Options()
@@ -27,11 +28,12 @@ class point_gainer:
         self.driver.get('https://gener8ads.com/account/login')
         time.sleep(5)
         # self.driver.find_element_by_xpath('/html/body/div[2]/div[2]/section/div[3]/div[1]/form/label[1]/input').send_keys(self.username)
-        self.type('/html/body/div[2]/div[2]/section/div[3]/div[1]/form/label[1]/input',self.username)
+        self.type('/html/body/div[2]/div[2]/section/div[3]/div[1]/form/label[1]/input', self.username)
         # self.driver.find_element_by_xpath('/html/body/div[2]/div[2]/section/div[3]/div[1]/form/label[2]/input').send_keys(self.password)
         self.type('/html/body/div[2]/div[2]/section/div[3]/div[1]/form/label[2]/input', self.password)
         time.sleep(0.3)
-        self.driver.find_element_by_xpath('/html/body/div[2]/div[2]/section/div[3]/div[1]/form/div/div[2]/button').click()
+        self.driver.find_element_by_xpath(
+            '/html/body/div[2]/div[2]/section/div[3]/div[1]/form/div/div[2]/button').click()
 
         login_break = True
         while login_break:
@@ -57,12 +59,37 @@ class point_gainer:
 
         print("Login successful")
 
-    def watch_ads(self):
-        while True:
+    def watch_ads(self, deadline=list(), threshold=30 ):
+        for i in range(threshold):
+            self.driver.get('https://www.standard.co.uk/')
             time.sleep(3)
-            self.driver.get('https://www.gumtree.com/')
 
-    def type(self, xpath, word:str, threshold=0.01):
+            SCROLL_PAUSE_TIME = 1
+
+            # Get scroll height
+            last_height = self.driver.execute_script("return document.body.scrollHeight")
+
+            while True:
+                # Scroll down to bottom
+                self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+
+                # Wait to load page
+                time.sleep(SCROLL_PAUSE_TIME)
+
+                # Calculate new scroll height and compare with last scroll height
+                new_height = self.driver.execute_script("return document.body.scrollHeight")
+                if new_height == last_height:
+                    break
+                last_height = new_height
+            ads = self.driver.find_elements_by_tag_name("iframe")
+            ads_replace = 0
+            for ad in ads:
+                if 'gener8' in ad.get_attribute("name"):
+                    ads_replace += 1
+            print('Ads replacement count: {}'.format(ads_replace))
+            # news reader
+
+    def type(self, xpath, word: str, threshold=0.01):
         for letter in word:
             self.driver.find_element_by_xpath(xpath).send_keys(letter)
             time.sleep(threshold)
