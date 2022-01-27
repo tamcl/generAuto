@@ -1,65 +1,67 @@
 import selenium
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
-import time
+import time, logging
+
+def check_element_exist(driver_, xpath):
+    try:
+        driver_.find_element_by_xpath(xpath)
+        return True
+    except Exception as e:
+        logging.warning(f'element {xpath} cannot be found, error:\n{repr(e)}')
+        return False
 
 
 class point_gainer:
-    def __init__(self, username: str, password: str, webdriver_path: str, extension_paths: list, db_path: str):
-        self.username = username
-        self.password = password
-        self.extension_paths = extension_paths
-        self.webdriver_path = webdriver_path
-        self.db_path = db_path
-        self.driver = None
-        self.selenium_setup()
-        self.login()
-        self.watch_ads()
-        self.driver.quit()
+    def __init__(self, driver, order_list_time:list=list()):
+        self.driver = driver
+        self.order_list_time=order_list_time
+        # self.login()
 
-    def selenium_setup(self):
-        chrome_options = Options()
-        for path in self.extension_paths:
-            chrome_options.add_extension(path)
-        self.driver = webdriver.Chrome(options=chrome_options, executable_path=self.webdriver_path)
+    def scrape_search_list(self,max_search:int =30, topics:list=list()):
+        logging.info('Initiate search list scrape')
+        if len(topics) ==0:
+            topics.append('news')
 
-    def login(self):
-        print('Start to login')
-        self.driver.get('https://gener8ads.com/account/login')
-        time.sleep(5)
-        # self.driver.find_element_by_xpath('/html/body/div[2]/div[2]/section/div[3]/div[1]/form/label[1]/input').send_keys(self.username)
-        self.type('/html/body/div[2]/div[2]/section/div[3]/div[1]/form/label[1]/input', self.username)
-        # self.driver.find_element_by_xpath('/html/body/div[2]/div[2]/section/div[3]/div[1]/form/label[2]/input').send_keys(self.password)
-        self.type('/html/body/div[2]/div[2]/section/div[3]/div[1]/form/label[2]/input', self.password)
-        time.sleep(0.3)
-        self.driver.find_element_by_xpath(
-            '/html/body/div[2]/div[2]/section/div[3]/div[1]/form/div/div[2]/button').click()
+        for search_topic in topics:
+            self.driver.get(f'https://www.google.com/search?q={search_topic.replace(" ", "+")}')
+            # try:
+            #     self.driver.find_elements_by_xpath('//input[@title="Search"]')
+            #     logging.info('Search bar found')
+            # except:
+            #     logging.warning(f'loading google search engine')
 
-        login_break = True
-        while login_break:
-            try:
-                self.driver.find_element_by_xpath('/html/body/div[2]/div[2]/section/div[3]/div[1]/header/h2')
-                login_break = False
-            except Exception as e:
-                # print(e)
-                pass
-        buttons = self.driver.find_element_by_class_name('mode-switch')
-        print(len(buttons.find_elements_by_tag_name('button')))
-        mode = 'Rewards'
-        button_selection = 0
-        for index in range(len(buttons.find_elements_by_tag_name('button'))):
-            if buttons.find_elements_by_tag_name('button')[index].text == mode:
-                button_selection = index
-                break
-        buttons.find_elements_by_tag_name('button')[button_selection].click()
+            if check_element_exist(self.driver, '//button[@id="L2AGLb"]'):
+                self.driver.find_element_by_xpath('//button[@id="L2AGLb"]').click()
+                logging.info('google consent agreed')
 
-        # self.driver.find_element_by_xpath('/html/body/div[3]/div[2]/section/div[3]/div[3]/div[3]/button[1]').click()
-        # time.sleep(1)
-        # self.driver.find_element_by_xpath('/html/body/div[2]/div[2]/section/div[3]/div[3]/div[3]/button[2]').click()
+            # self.type('//input[@title="Search"]', search_topic, threshold=0.005)
+            # self.driver.find_element_by_xpath('//input[@class="gNO89b"]').click()
+            logging.info(f'search keyword: {search_topic}')
+            sleep_time = 5
+            for i in range(5):
+                time.sleep(sleep_time)
+                try:
+                    self.google_next_page()
+                    sleep_time = 5
+                except:
+                    sleep_time+=5
 
-        print("Login successful")
+    def get_previoius_website_data(self, path:str):
+        with open(path, 'r') as f:
+            self.previous_raw = f.read()
 
-    def watch_ads(self, deadline=list(), threshold=30 ):
+
+
+    def google_next_page(self):
+        if check_element_exist(self.driver, '//a[@id="pnnext"]'):
+            self.driver.find_element_by_xpath('//a[@id="pnnext"]').click()
+            logging.info('Google click next page')
+
+
+
+
+    def watch_ads(self, deadline=list(), threshold=5):
         for i in range(threshold):
             self.driver.get('https://www.standard.co.uk/')
             time.sleep(3)
